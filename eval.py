@@ -43,7 +43,6 @@ if __name__ == "__main__":
     )
     parser.add_argument('--ckpt', type=str)
     parser.add_argument('--artifacts', type=str, default=".", help='path to artifacts.')
-    parser.add_argument('--cuda', type=int, default=0, help='index of gpu to use')
     parser.add_argument('--start_iter', type=int, default=6)
     parser.add_argument('--end_iter', type=int, default=10)
 
@@ -57,7 +56,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     noise_dim = 256
-    device = torch.device('cuda:%d'%(args.cuda))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     net_ig = Generator( ngf=64, nz=noise_dim, nc=3, im_size=args.im_size)#, big=args.big )
     net_ig.to(device)

@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import torch
 from torch.autograd import Variable
@@ -6,7 +7,7 @@ from IPython import embed
 
 class BaseModel():
     def __init__(self):
-        pass;
+        pass
         
     def name(self):
         return 'BaseModel'

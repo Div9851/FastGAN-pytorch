@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
 from torchvision import utils as vutils
+is_gpu_available = torch.cuda.is_available()
 
 import argparse
 import random
@@ -16,7 +17,7 @@ from operation import ImageFolder, InfiniteSamplerWrapper
 from diffaug import DiffAugment
 policy = 'color,translation'
 import lpips
-percept = lpips.PerceptualLoss(model='net-lin', net='vgg', use_gpu=True)
+percept = lpips.PerceptualLoss(model='net-lin', net='vgg', use_gpu=is_gpu_available)
 
 
 #torch.backends.cudnn.benchmark = True
@@ -63,16 +64,12 @@ def train(args):
     nz = 256
     nlr = 0.0002
     nbeta1 = 0.5
-    use_cuda = True
-    multi_gpu = True
     dataloader_workers = 8
     current_iteration = 0
     save_interval = 100
     saved_model_folder, saved_image_folder = get_dir(args)
     
-    device = torch.device("cpu")
-    if use_cuda:
-        device = torch.device("cuda:0")
+    device = torch.device("cuda" if is_gpu_available else "cpu")
 
     transform_list = [
             transforms.Resize((int(im_size),int(im_size))),
@@ -112,6 +109,9 @@ def train(args):
 
     fixed_noise = torch.FloatTensor(8, nz).normal_(0, 1).to(device)
     
+    optimizerG = optim.Adam(netG.parameters(), lr=nlr, betas=(nbeta1, 0.999))
+    optimizerD = optim.Adam(netD.parameters(), lr=nlr, betas=(nbeta1, 0.999))
+
     if checkpoint != 'None':
         ckpt = torch.load(checkpoint)
         netG.load_state_dict(ckpt['g'])
@@ -122,12 +122,9 @@ def train(args):
         current_iteration = int(checkpoint.split('_')[-1].split('.')[0])
         del ckpt
         
-    if multi_gpu:
+    if is_gpu_available:
         netG = nn.DataParallel(netG.to(device))
         netD = nn.DataParallel(netD.to(device))
-
-    optimizerG = optim.Adam(netG.parameters(), lr=nlr, betas=(nbeta1, 0.999))
-    optimizerD = optim.Adam(netD.parameters(), lr=nlr, betas=(nbeta1, 0.999))
     
     for iteration in tqdm(range(current_iteration, total_iterations+1)):
         real_image = next(dataloader)
